@@ -327,13 +327,11 @@ body{font-family:-apple-system,'Noto Sans KR',sans-serif;background:var(--cream)
 <script>
 
 /**
- * Auris Neural Desync Engine
+ * Auris Neural Desync Engine (Soft Version)
  * Based on: Yukhnovich EA et al., Hearing Research, 2025
- * DOI: 10.1016/j.heares.2025.109335
- * 논문 파라미터 기반 근사 구현
- * f0: 96~256Hz, harmonics: 1~16kHz
- * d=1, ω=1Hz, μ=4.5, r=3, ν=0.125Hz
- * 4초 세그먼트, 1초 raised cosine ramp
+ * 논문 파라미터 기반 근사 구현 - 부드러운 사운드 버전
+ * 핵심 원리 유지: cross-frequency de-correlating modulation
+ * 변경: 날카로운 harmonic → 부드러운 sine blend + 핑크노이즈 베이스
  */
 class DesyncEngine {
   constructor(audioCtx, tinnitusFreq) {
@@ -348,8 +346,8 @@ class DesyncEngine {
 
   generateSegment() {
     const sr = this.sr;
-    const dur = 4.0;       // 논문: 4초
-    const ramp = 1.0;      // 논문: 1초 raised cosine
+    const dur = 4.0;
+    const ramp = 1.0;
     const N = Math.floor(sr * dur);
     const buf = this.audioCtx.createBuffer(1, N, sr);
     const data = buf.getChannelData(0);
@@ -372,13 +370,26 @@ class DesyncEngine {
     const phi = Array.from({length: count}, () => Math.random() * 2 * Math.PI);
     const q   = Array.from({length: count}, () => Math.random() * 2 * Math.PI);
     const p   = Array.from({length: count}, () => Math.random() * 2 * Math.PI);
-    const norm = 0.3 / Math.sqrt(count);
+
+    // 핑크노이즈 상태 (부드러운 베이스용)
+    const ps = new Float32Array(7);
+    let lastBrown = 0;
+
     const rampN = Math.floor(ramp * sr);
 
     for (let i = 0; i < N; i++) {
       const t = i / sr;
-      let s = 0;
 
+      // 1. 핑크노이즈 베이스 생성 (부드러운 배경)
+      const w = (Math.random() * 2 - 1);
+      ps[0]=0.99886*ps[0]+w*0.0555179; ps[1]=0.99332*ps[1]+w*0.0750759;
+      ps[2]=0.96900*ps[2]+w*0.1538520; ps[3]=0.86650*ps[3]+w*0.3104856;
+      ps[4]=0.55000*ps[4]+w*0.5329522; ps[5]=-0.7616*ps[5]-w*0.0168980;
+      const pink = (ps[0]+ps[1]+ps[2]+ps[3]+ps[4]+ps[5]+ps[6]+w*0.5362)*0.11;
+      ps[6] = w * 0.115926;
+
+      // 2. 논문 기반 변조 사운드 생성
+      let harmonicSum = 0;
       for (let idx = 0; idx < count; idx++) {
         const n = nMin + idx;
         const freq = n * f0;
@@ -386,25 +397,44 @@ class DesyncEngine {
         // Fn = log2(n*f0/c)
         const Fn = Math.log2(freq / c);
 
-        // S(t) = 4.5 + 3*sin(p + 2π*0.125*t)
+        // S(t) = 4.5 + 3*sin(p + 2π*0.125*t)  (논문 파라미터)
         const St = 4.5 + 3 * Math.sin(p[idx] + 2 * Math.PI * 0.125 * t);
 
-        // An(t) = 1 + sin(2π[1*t + Fn*S(t)] + q)
+        // An(t) = 1 + sin(2π[1*t + Fn*S(t)] + q)  (논문 파라미터)
         const An = 1 + Math.sin(2 * Math.PI * (t + Fn * St) + q[idx]);
 
-        // 밴드 내 harmonic만 변조
+        // 밴드 내만 변조 적용
         const inBand = freq >= bandLow && freq <= bandHigh;
         const amp = inBand ? Math.max(0, An) : 1.0;
 
-        s += Math.sin(2 * Math.PI * freq * t + phi[idx]) * amp;
+        // 핵심 변경: 사인파에 가우시안 가중치 적용 (고차 harmonic 감쇠)
+        // 높은 harmonic일수록 진폭을 줄여서 금속성 제거
+        const harmonicWeight = Math.exp(-0.3 * (n - nMin) / count);
+        harmonicSum += Math.sin(2 * Math.PI * freq * t + phi[idx]) * amp * harmonicWeight;
       }
 
-      // Raised cosine ramp
+      // 3. 혼합: 핑크노이즈 50% + 변조 사운드 50%
+      // 핑크노이즈가 날카로운 harmonic 소리를 부드럽게 감싸줌
+      const norm = 0.15 / Math.sqrt(count);
+      const harmonicPart = harmonicSum * norm;
+      const noisePart = pink * 0.25;
+
+      // 이명 주파수 밴드에만 집중한 부드러운 사인파 추가
+      // (Flosser 느낌의 부드러운 고음)
+      const softCarrier = Math.sin(2 * Math.PI * c * t) *
+        (0.5 + 0.5 * Math.sin(2 * Math.PI * 0.125 * t)) * 0.08;
+
+      let sample = harmonicPart + noisePart + softCarrier;
+
+      // 4. 소프트 클리핑 (tanh로 부드럽게)
+      sample = Math.tanh(sample * 1.5) * 0.6;
+
+      // 5. Raised cosine ramp
       let rg = 1.0;
       if (i < rampN) rg = 0.5 * (1 - Math.cos(Math.PI * i / rampN));
       else if (i > N - rampN) rg = 0.5 * (1 - Math.cos(Math.PI * (N-i) / rampN));
 
-      data[i] = Math.max(-0.9, Math.min(0.9, s * norm * rg));
+      data[i] = sample * rg;
     }
     return buf;
   }
@@ -446,6 +476,7 @@ class DesyncEngine {
   setVolume(v) { if(this.masterGain) this.masterGain.gain.setTargetAtTime(v, this.audioCtx.currentTime, 0.1); }
 }
 let desyncEngine = null;
+
 
 let audioCtx = null;
 const soundNodes = {};
