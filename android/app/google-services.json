@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "934349707918",
+    "project_id": "ethereal-zodiac-432423-u3",
+    "storage_bucket": "ethereal-zodiac-432423-u3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:934349707918:android:35514d5ec65f08b937c7df",
+        "android_client_info": {
+          "package_name": "com.kdh.ear"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAro-9vTopwefZbW0jM0kb7CUmVmnCQSps"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
