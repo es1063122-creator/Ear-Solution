@@ -16,9 +16,7 @@ void main() async {
     statusBarIconBrightness: Brightness.dark,
   ));
 
-  // Firebase 임시 제거 - 나중에 추가
-  // await Firebase.initializeApp();
-
+  // Firebase 나중에 연결 - 지금은 로컬로 실행
   final prefs = await SharedPreferences.getInstance();
   final onboardingDone = prefs.getBool(AppConstants.keyOnboardingDone) ?? false;
 

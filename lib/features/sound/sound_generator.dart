@@ -1,163 +1,117 @@
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
-import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// 각 사운드 레이어를 DSP로 직접 생성
 class SoundGenerator {
   static const int sampleRate = 44100;
-  static const int durationSeconds = 20; // 루프용 20초
+  static const int durationSeconds = 30;
   static const int totalSamples = sampleRate * durationSeconds;
-  static final Random _random = Random();
+  static final Random _rng = Random();
 
-  /// 사운드 ID별 WAV 파일 생성
   static Future<File> generateSound(String soundId, {double volume = 1.0}) async {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/sound_$soundId.wav');
 
+    final safeVolume = volume.clamp(0.0, 0.8).toDouble();
     final pcm = Int16List(totalSamples);
-    final generator = _getGenerator(soundId);
-
     for (int i = 0; i < totalSamples; i++) {
       final t = i / sampleRate;
-      double sample = generator(t, i);
-      // 페이드인/아웃 (루프 클릭 방지)
-      final fadeLen = sampleRate ~/ 4;
-      if (i < fadeLen) sample *= i / fadeLen;
-      if (i > totalSamples - fadeLen) sample *= (totalSamples - i) / fadeLen;
-      pcm[i] = (sample * volume * 28000).round().clamp(-32768, 32767);
+      double s = _gen(soundId, t, i).clamp(-1.0, 1.0);
+
+      // fade in/out to avoid clicks at loop boundary.
+      final fade = sampleRate ~/ 2;
+      if (i < fade) s *= i / fade;
+      if (i > totalSamples - fade) s *= (totalSamples - i) / fade;
+
+      pcm[i] = (s * safeVolume * 18000).round().clamp(-32768, 32767);
     }
 
-    await file.writeAsBytes(_buildWav(pcm));
+    await file.writeAsBytes(_wav(pcm), flush: true);
+    debugPrint('생성: $soundId (${file.lengthSync()} bytes)');
     return file;
   }
 
-  /// 사운드 ID → 생성 함수
-  static double Function(double t, int i) _getGenerator(String soundId) {
-    switch (soundId) {
+  // Pink noise state.
+  static final List<double> _pk = List.filled(7, 0.0);
+  static double _lb = 0.0;
+
+  static double _pink() {
+    final w = _rng.nextDouble() * 2 - 1;
+    _pk[0] = 0.99886 * _pk[0] + w * 0.0555179;
+    _pk[1] = 0.99332 * _pk[1] + w * 0.0750759;
+    _pk[2] = 0.96900 * _pk[2] + w * 0.1538520;
+    _pk[3] = 0.86650 * _pk[3] + w * 0.3104856;
+    _pk[4] = 0.55000 * _pk[4] + w * 0.5329522;
+    _pk[5] = -0.7616 * _pk[5] - w * 0.0168980;
+    final p = (_pk[0] + _pk[1] + _pk[2] + _pk[3] + _pk[4] + _pk[5] + _pk[6] + w * 0.5362) * 0.11;
+    _pk[6] = w * 0.115926;
+    return p.clamp(-1.0, 1.0);
+  }
+
+  static double _brown() {
+    final w = _rng.nextDouble() * 2 - 1;
+    _lb = (_lb + 0.02 * w) / 1.02;
+    return (_lb * 3.5).clamp(-1.0, 1.0);
+  }
+
+  static double _gen(String id, double t, int i) {
+    switch (id) {
       case 'masking_8k':
-        // 8kHz 중심 핑크노이즈 밴드패스 (와이프 이명 맞춤)
-        return (t, i) => _bandpassNoise(i, 6000, 10000) * 0.7;
-
+        // Safer lower-output 8 kHz masking layer.
+        return _pink() * 0.35 + sin(2 * pi * 8000 * t) * 0.16 + sin(2 * pi * 7500 * t) * 0.08 + sin(2 * pi * 8500 * t) * 0.08;
       case 'pink_noise':
-        // 핑크노이즈 (1/f 특성)
-        return (t, i) => _pinkNoise(i) * 0.8;
-
+        return _pink() * 0.75;
       case 'brown_noise':
-        // 브라운노이즈 (저음 강조)
-        return (t, i) => _brownNoise(i) * 0.7;
-
+        return _brown() * 0.75;
       case 'rain':
-        // 빗소리 = 랜덤 버스트 + 핑크노이즈
-        return (t, i) {
-          final base = _pinkNoise(i) * 0.5;
-          final drops = (_random.nextDouble() < 0.003) ? _random.nextDouble() * 0.4 : 0.0;
-          return base + drops;
-        };
-
+        final base = _pink() * 0.5;
+        final drop = _rng.nextDouble() < 0.003 ? sin(2 * pi * 1200 * t) * _rng.nextDouble() * 0.25 : 0.0;
+        return base + drop;
       case 'waves':
-        // 파도 = 저음 사인 변조 + 노이즈
-        return (t, i) {
-          final wave = sin(2 * pi * 0.15 * t) * 0.5 + 0.5;
-          return _brownNoise(i) * wave * 0.8;
-        };
-
+        final wave = sin(2 * pi * 0.1 * t) * 0.5 + 0.5;
+        final wave2 = sin(2 * pi * 0.07 * t) * 0.3 + 0.7;
+        return _brown() * wave * wave2 * 0.75;
       case 'forest':
-        // 숲소리 = 중음 노이즈 + 귀뚜라미 요소
-        return (t, i) {
-          final base = _bandpassNoise(i, 800, 4000) * 0.4;
-          final cricket = sin(2 * pi * 3800 * t) * 0.1 *
-            (sin(2 * pi * 8 * t) > 0.7 ? 1.0 : 0.0);
-          return base + cricket;
-        };
-
+        final base = _pink() * 0.45;
+        final leaf = _rng.nextDouble() < 0.001 ? _pink() * 0.22 * sin(2 * pi * 800 * t) : 0.0;
+        final bird = sin(2 * pi * 12 * t) > 0.98 ? sin(2 * pi * (3000 + sin(2 * pi * 5 * t) * 200) * t) * 0.10 : 0.0;
+        return base + leaf + bird;
       case 'cricket':
-        // 귀뚜라미 = 고음 주기적 버스트
-        return (t, i) {
-          final burst = (sin(2 * pi * 5 * t) > 0.6) ? 1.0 : 0.0;
-          return sin(2 * pi * 4200 * t) * burst * 0.4 +
-                 sin(2 * pi * 3800 * t) * burst * 0.3;
-        };
-
+        final chirpRate = 4.0;
+        final chirpPhase = (t * chirpRate) % 1.0;
+        if (chirpPhase >= 0.3) return _pink() * 0.04;
+        final intensity = sin(pi * chirpPhase / 0.3);
+        return (sin(2 * pi * 4200 * t) * 0.25 + sin(2 * pi * 4500 * t) * 0.18) * intensity + _pink() * 0.08;
       case 'cafe':
-        // 카페 = 중음 노이즈 (사람 소리 느낌)
-        return (t, i) {
-          final base = _bandpassNoise(i, 200, 3000) * 0.5;
-          final rumble = sin(2 * pi * 80 * t) * 0.1;
-          return base + rumble;
-        };
-
+        final rumble = sin(2 * pi * 80 * t) * 0.10 + sin(2 * pi * 120 * t) * 0.07;
+        final voice = _pink() * 0.26 * (sin(2 * pi * 0.3 * t) * 0.3 + 0.7);
+        final cup = _rng.nextDouble() < 0.0005 ? sin(2 * pi * 800 * t) * 0.12 : 0.0;
+        return rumble + voice + cup;
       case 'fan':
-        // 선풍기 = 저음 사인 + 고음 노이즈
-        return (t, i) {
-          final motor = sin(2 * pi * 50 * t) * 0.3 +
-                        sin(2 * pi * 100 * t) * 0.15 +
-                        sin(2 * pi * 150 * t) * 0.08;
-          final air = _pinkNoise(i) * 0.2;
-          return motor + air;
-        };
-
+        return sin(2 * pi * 50 * t) * 0.18 + sin(2 * pi * 100 * t) * 0.09 + sin(2 * pi * 150 * t) * 0.05 + _pink() * 0.18;
       case 'binaural_alpha':
-        // 알파파 바이노럴 = 10Hz 차이 (440Hz vs 450Hz)
-        return (t, i) {
-          final carrier = sin(2 * pi * 440 * t) * 0.4;
-          final beat = sin(2 * pi * 10 * t) * 0.1; // 10Hz 알파파
-          return carrier + beat;
-        };
-
+        // Mono approximation. Keep modest volume for comfort.
+        return sin(2 * pi * 440 * t) * 0.18 + sin(2 * pi * 10 * t) * 0.04;
       default:
-        return (t, i) => _pinkNoise(i) * 0.5;
+        return _pink() * 0.45;
     }
   }
 
-  // --- 노이즈 생성기들 ---
-
-  static double _lastPink = 0;
-  static final List<double> _pinkState = List.filled(7, 0.0);
-  static double _pinkNoise(int i) {
-    // Paul Kellet 핑크노이즈 알고리즘
-    final white = _random.nextDouble() * 2 - 1;
-    _pinkState[0] = 0.99886 * _pinkState[0] + white * 0.0555179;
-    _pinkState[1] = 0.99332 * _pinkState[1] + white * 0.0750759;
-    _pinkState[2] = 0.96900 * _pinkState[2] + white * 0.1538520;
-    _pinkState[3] = 0.86650 * _pinkState[3] + white * 0.3104856;
-    _pinkState[4] = 0.55000 * _pinkState[4] + white * 0.5329522;
-    _pinkState[5] = -0.7616 * _pinkState[5] - white * 0.0168980;
-    final pink = (_pinkState[0] + _pinkState[1] + _pinkState[2] +
-                  _pinkState[3] + _pinkState[4] + _pinkState[5] +
-                  _pinkState[6] + white * 0.5362) * 0.11;
-    _pinkState[6] = white * 0.115926;
-    return pink.clamp(-1.0, 1.0);
-  }
-
-  static double _lastBrown = 0;
-  static double _brownNoise(int i) {
-    final white = _random.nextDouble() * 2 - 1;
-    _lastBrown = (_lastBrown + 0.02 * white) / 1.02;
-    return (_lastBrown * 3.5).clamp(-1.0, 1.0);
-  }
-
-  static double _bandpassNoise(int i, double low, double high) {
-    // 간단한 밴드패스: 랜덤 + 주파수 범위 내 사인 합성
-    final white = _random.nextDouble() * 2 - 1;
-    final t = i / sampleRate;
-    final midFreq = (low + high) / 2;
-    final bandwidth = high - low;
-    final sine = sin(2 * pi * midFreq * t) *
-      (1 + 0.3 * sin(2 * pi * (bandwidth / 4) * t));
-    return (white * 0.3 + sine * 0.7).clamp(-1.0, 1.0);
-  }
-
-  // WAV 헤더 빌더
-  static List<int> _buildWav(Int16List pcm) {
+  static List<int> _wav(Int16List pcm) {
     final dataSize = pcm.length * 2;
     final header = ByteData(44);
-    [0x52,0x49,0x46,0x46].asMap().forEach((i,v) => header.setUint8(i, v));
+    const riff = [0x52, 0x49, 0x46, 0x46];
+    const wave = [0x57, 0x41, 0x56, 0x45];
+    const fmt = [0x66, 0x6D, 0x74, 0x20];
+    const data = [0x64, 0x61, 0x74, 0x61];
+    for (var i = 0; i < 4; i++) header.setUint8(i, riff[i]);
     header.setUint32(4, 36 + dataSize, Endian.little);
-    [0x57,0x41,0x56,0x45].asMap().forEach((i,v) => header.setUint8(8+i, v));
-    [0x66,0x6D,0x74,0x20].asMap().forEach((i,v) => header.setUint8(12+i, v));
+    for (var i = 0; i < 4; i++) header.setUint8(8 + i, wave[i]);
+    for (var i = 0; i < 4; i++) header.setUint8(12 + i, fmt[i]);
     header.setUint32(16, 16, Endian.little);
     header.setUint16(20, 1, Endian.little);
     header.setUint16(22, 1, Endian.little);
@@ -165,84 +119,155 @@ class SoundGenerator {
     header.setUint32(28, sampleRate * 2, Endian.little);
     header.setUint16(32, 2, Endian.little);
     header.setUint16(34, 16, Endian.little);
-    [0x64,0x61,0x74,0x61].asMap().forEach((i,v) => header.setUint8(36+i, v));
+    for (var i = 0; i < 4; i++) header.setUint8(36 + i, data[i]);
     header.setUint32(40, dataSize, Endian.little);
-    final result = <int>[];
-    result.addAll(header.buffer.asUint8List());
-    for (final s in pcm) {
-      result.add(s & 0xFF);
-      result.add((s >> 8) & 0xFF);
+
+    final result = <int>[...header.buffer.asUint8List()];
+    for (final sample in pcm) {
+      result.add(sample & 0xFF);
+      result.add((sample >> 8) & 0xFF);
     }
     return result;
   }
 }
 
-/// 사운드 레이어 믹서 오디오 매니저
 class SoundMixerPlayer {
-  final Map<String, AudioPlayer> _players = {};
-  final Map<String, double> _volumes = {};
+  final Map<String, AudioPlayer> _players = <String, AudioPlayer>{};
+  final Map<String, double> _volumes = <String, double>{};
+  final Map<String, int> _versions = <String, int>{};
   bool _isPlaying = false;
+  bool _disposed = false;
 
   bool get isPlaying => _isPlaying;
+  bool get hasActiveVolume => _volumes.values.any((v) => v > 0.001);
 
-  Future<void> setVolume(String soundId, double volume) async {
-    _volumes[soundId] = volume;
-    if (_players.containsKey(soundId)) {
-      await _players[soundId]!.setVolume(volume);
-      if (volume <= 0) {
-        await _players[soundId]!.pause();
-      } else if (_isPlaying) {
-        await _players[soundId]!.play();
-      }
+  Future<void> setVolume(String id, double volume) async {
+    if (_disposed) return;
+
+    final safeVolume = volume.clamp(0.0, 1.0).toDouble();
+    _volumes[id] = safeVolume;
+    _versions[id] = (_versions[id] ?? 0) + 1;
+    final version = _versions[id]!;
+
+    if (safeVolume <= 0.001) {
+      await _stopAndRemove(id);
+      if (!hasActiveVolume) _isPlaying = false;
+      return;
+    }
+
+    final existing = _players[id];
+    if (existing != null) {
+      await existing.setVolume(safeVolume);
+      if (_isPlaying) await existing.play();
+      return;
+    }
+
+    if (_isPlaying) {
+      await _createPlayerIfStillNeeded(id, safeVolume, version);
     }
   }
 
   Future<void> play() async {
+    if (_disposed) return;
     _isPlaying = true;
-    for (final entry in _volumes.entries) {
-      if (entry.value > 0) {
-        await _ensurePlayerReady(entry.key, entry.value);
-      }
-    }
-  }
 
-  Future<void> _ensurePlayerReady(String soundId, double volume) async {
-    if (!_players.containsKey(soundId)) {
-      final player = AudioPlayer();
-      _players[soundId] = player;
-      try {
-        final file = await SoundGenerator.generateSound(soundId, volume: volume);
-        await player.setFilePath(file.path);
-        await player.setLoopMode(LoopMode.one);
-        await player.setVolume(volume);
-        if (_isPlaying) await player.play();
-      } catch (e) {
-        debugPrint('SoundMixerPlayer error ($soundId): $e');
+    final entries = Map<String, double>.from(_volumes).entries.where((e) => e.value > 0.001).toList();
+    for (final entry in entries) {
+      final id = entry.key;
+      final volume = entry.value;
+      _versions[id] = (_versions[id] ?? 0) + 1;
+      final version = _versions[id]!;
+
+      final existing = _players[id];
+      if (existing != null) {
+        await existing.setVolume(volume);
+        await existing.play();
+      } else {
+        await _createPlayerIfStillNeeded(id, volume, version);
       }
-    } else {
-      await _players[soundId]!.setVolume(volume);
-      if (_isPlaying) await _players[soundId]!.play();
     }
+
+    if (!hasActiveVolume) _isPlaying = false;
   }
 
   Future<void> pause() async {
     _isPlaying = false;
-    for (final player in _players.values) {
-      await player.pause();
+    final players = List<AudioPlayer>.from(_players.values);
+    for (final player in players) {
+      try {
+        await player.pause();
+      } catch (e) {
+        debugPrint('SoundMixerPlayer pause error: $e');
+      }
     }
   }
 
-  Future<void> stop() async {
+  Future<void> stop({bool disposePlayers = true}) async {
     _isPlaying = false;
-    for (final player in _players.values) {
-      await player.stop();
+    for (final id in _players.keys.toList()) {
+      _versions[id] = (_versions[id] ?? 0) + 1;
+    }
+
+    final players = List<AudioPlayer>.from(_players.values);
+    _players.clear();
+
+    for (final player in players) {
+      try {
+        await player.stop();
+      } catch (_) {}
+      if (disposePlayers) {
+        try {
+          await player.dispose();
+        } catch (_) {}
+      }
     }
   }
 
-  void dispose() {
-    for (final player in _players.values) {
-      player.dispose();
+  Future<void> resetAll() async {
+    _volumes.clear();
+    await stop(disposePlayers: true);
+  }
+
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+    await stop(disposePlayers: true);
+  }
+
+  Future<void> _createPlayerIfStillNeeded(String id, double volume, int version) async {
+    try {
+      final file = await SoundGenerator.generateSound(id, volume: 1.0);
+
+      if (_disposed || !_isPlaying || (_volumes[id] ?? 0.0) <= 0.001 || _versions[id] != version) {
+        return;
+      }
+
+      final player = AudioPlayer();
+      _players[id] = player;
+      await player.setFilePath(file.path);
+      await player.setLoopMode(LoopMode.one);
+      await player.setVolume((_volumes[id] ?? volume).clamp(0.0, 1.0).toDouble());
+
+      if (_disposed || !_isPlaying || (_volumes[id] ?? 0.0) <= 0.001 || _versions[id] != version) {
+        await _stopAndRemove(id);
+        return;
+      }
+
+      await player.play();
+    } catch (e) {
+      debugPrint('SoundMixerPlayer error ($id): $e');
     }
-    _players.clear();
+  }
+
+  Future<void> _stopAndRemove(String id) async {
+    _versions[id] = (_versions[id] ?? 0) + 1;
+    final player = _players.remove(id);
+    if (player == null) return;
+    try {
+      await player.stop();
+    } catch (_) {}
+    try {
+      await player.dispose();
+    } catch (_) {}
   }
 }
