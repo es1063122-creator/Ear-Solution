@@ -1,783 +1,189 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Auris">
-<meta name="theme-color" content="#1E3932">
-<link rel="apple-touch-icon" href="icon.png">
-<link rel="icon" type="image/png" href="icon.png">
-<title>Auris — 이명 관리</title>
-<style>
-:root{--green-dark:#1E3932;--green:#00704A;--green-light:#D4E9E2;--green-mid:#4A6741;--gold:#CBA258;--cream:#F2F0EB;--cream2:#E8E4DC;--white:#FFFFFF;--text:#1E3932;--text-sub:#4A6741;--text-light:#7A9E8E;}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{font-family:-apple-system,'Noto Sans KR',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--green-light);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 6px;cursor:pointer;color:var(--text-light);font-size:10px;gap:3px;transition:color 0.2s;}
-.nav-item.active{color:var(--green);}
-.nav-item svg{width:22px;height:22px;}
-.screen{display:none;padding:0 0 80px;min-height:100vh;}
-.screen.active{display:block;}
-.page-header{background:var(--cream);padding:56px 20px 16px;position:sticky;top:0;z-index:50;}
-.page-title{font-size:22px;font-weight:700;color:var(--green-dark);}
-.page-sub{font-size:13px;color:var(--text-light);margin-top:2px;}
-.content{padding:16px 20px;}
-.card{background:var(--white);border-radius:16px;border:1px solid var(--green-light);padding:16px;margin-bottom:12px;}
-.btn-primary{background:var(--green);color:white;border:none;border-radius:24px;padding:14px 24px;font-size:15px;font-weight:600;width:100%;cursor:pointer;font-family:inherit;}
-.section-label{font-size:11px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 8px;}
-.status-card{background:var(--green-dark);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;}
-.quick-btn{background:var(--green);border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:12px;border:none;width:100%;font-family:inherit;}
-.desync-card{background:linear-gradient(135deg,var(--green-dark),var(--green));border-radius:16px;padding:16px;margin-bottom:12px;cursor:pointer;}
-.desync-badge{background:var(--gold);color:white;font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:8px;}
-.progress-bar{background:rgba(255,255,255,0.2);border-radius:4px;height:4px;margin-top:10px;}
-.progress-fill{background:var(--gold);border-radius:4px;height:100%;}
-.relax-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
-.relax-card{background:var(--white);border-radius:12px;border:1px solid var(--green-light);padding:14px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
-.play-card{background:var(--green-dark);border-radius:16px;padding:16px;margin:0 20px 12px;display:flex;align-items:center;gap:12px;}
-.play-btn{margin-left:auto;width:52px;height:52px;border-radius:50%;background:var(--green);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.play-btn.inactive{background:var(--green-mid);}
-.layer-item{background:var(--cream2);border-radius:12px;padding:12px 14px;margin-bottom:10px;border:1.5px solid transparent;display:flex;align-items:center;gap:8px;}
-.layer-item.active{background:var(--white);border-color:var(--green);}
-.layer-icon{font-size:18px;width:28px;flex-shrink:0;}
-.layer-name{font-size:13px;color:var(--text-light);width:80px;flex-shrink:0;}
-.layer-item.active .layer-name{color:var(--green-dark);font-weight:600;}
-.layer-slider{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:var(--green-light);outline:none;cursor:pointer;}
-.layer-slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--green);cursor:pointer;}
-.layer-vol{font-size:12px;color:var(--text-light);font-weight:600;width:28px;text-align:right;}
-.layer-item.active .layer-vol{color:var(--green);}
-.desync-screen{background:var(--green-dark);min-height:100vh;}
-.desync-header{padding:56px 20px 16px;display:flex;align-items:center;justify-content:space-between;}
-.freq-btn{background:rgba(255,255,255,0.1);border:none;color:var(--gold);font-size:13px;font-weight:600;padding:6px 12px;border-radius:20px;cursor:pointer;font-family:inherit;}
-.desync-progress-card{margin:0 20px 16px;background:rgba(255,255,255,0.08);border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;}
-.days-badge{margin-left:auto;background:var(--green);color:white;font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
-.visualizer-wrap{display:flex;justify-content:center;margin:20px 0;}
-.timer-display{text-align:center;color:white;font-size:56px;font-weight:300;letter-spacing:2px;}
-.timer-goal{text-align:center;color:var(--green-light);font-size:14px;margin-top:8px;}
-.session-progress{margin:20px 40px 0;background:rgba(255,255,255,0.1);border-radius:4px;height:4px;}
-.session-fill{background:var(--green-light);border-radius:4px;height:100%;transition:width 1s linear;}
-.session-pct{text-align:center;color:var(--text-light);font-size:12px;margin-top:8px;}
-.guide-card{margin:20px 20px 0;background:rgba(255,255,255,0.06);border-radius:12px;padding:14px;}
-.guide-card p{color:var(--green-light);font-size:13px;text-align:center;line-height:1.6;}
-.controls{display:flex;align-items:center;justify-content:center;gap:20px;margin:20px 0;}
-.stop-btn{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.main-btn{width:72px;height:72px;border-radius:50%;background:var(--green);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;}
-.modal-overlay.show{display:flex;align-items:flex-end;}
-.modal-sheet{background:var(--green-dark);border-radius:20px 20px 0 0;padding:24px;width:100%;max-height:80vh;overflow-y:auto;padding-bottom:calc(24px + env(safe-area-inset-bottom));}
-.modal-title{color:white;font-size:18px;font-weight:600;margin-bottom:6px;}
-.modal-sub{color:var(--green-light);font-size:13px;margin-bottom:16px;}
-.freq-option{background:rgba(255,255,255,0.08);border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer;border:2px solid transparent;}
-.freq-option.selected{background:var(--green);}
-.freq-option-label{color:white;font-size:15px;font-weight:500;}
-.freq-option-desc{color:var(--green-light);font-size:12px;margin-top:2px;}
-.timer-modal{background:var(--cream);border-radius:20px 20px 0 0;padding:24px;width:100%;padding-bottom:calc(24px + env(safe-area-inset-bottom));}
-.timer-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
-.timer-chip{background:var(--cream2);border-radius:20px;padding:10px 20px;cursor:pointer;font-size:14px;font-weight:500;color:var(--text-sub);}
-.timer-chip.selected{background:var(--green);color:white;}
-.preset-modal{background:var(--cream);border-radius:20px 20px 0 0;padding:24px;width:100%;padding-bottom:calc(24px + env(safe-area-inset-bottom));}
-.preset-item{background:var(--white);border-radius:12px;border:1px solid var(--green-light);padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;}
-.mixer-bottom{position:sticky;bottom:64px;background:var(--white);border-top:1px solid var(--green-light);padding:12px 20px;display:flex;gap:10px;}
-.timer-trigger{background:var(--cream2);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:4px;cursor:pointer;border:2px solid transparent;white-space:nowrap;}
-.timer-trigger.active{background:var(--green-light);border-color:var(--green);}
-.tag-btn{background:var(--cream2);border-radius:20px;padding:6px 14px;font-size:13px;color:var(--text-sub);cursor:pointer;}
-.tag-btn.active{background:var(--green);color:white;}
-.mood-btn{font-size:32px;cursor:pointer;opacity:0.3;}
-.mood-btn.active{opacity:1;}
-.star-btn{font-size:22px;color:var(--green-light);cursor:pointer;}
-.star-btn.active{color:var(--gold);}
-.factor-btn{background:var(--cream2);border-radius:20px;padding:8px 14px;font-size:13px;color:var(--text-sub);cursor:pointer;}
-.factor-btn.active{background:var(--green-light);color:var(--green);}
-.chat-bubble{max-width:80%;padding:10px 14px;border-radius:16px;margin-bottom:10px;font-size:14px;line-height:1.5;}
-.chat-bubble.ai{background:var(--green-light);color:var(--text);border-radius:16px 16px 16px 4px;}
-.chat-bubble.user{background:var(--green);color:white;border-radius:16px 16px 4px 16px;margin-left:auto;}
+  <base href="/">
 
-/* iOS 오디오 잠금 해제 오버레이 */
-.audio-unlock{position:fixed;inset:0;background:rgba(30,57,50,0.97);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;}
-.audio-unlock h2{color:white;font-size:28px;font-weight:700;margin-bottom:8px;}
-.audio-unlock p{color:var(--green-light);font-size:15px;text-align:center;line-height:1.6;margin-bottom:32px;}
-.unlock-btn{background:var(--green);color:white;border:none;border-radius:24px;padding:18px 48px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;}
-.audio-icon{font-size:64px;margin-bottom:24px;}
-</style>
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Auris - tinnitus sound care, desync sound, haptic relaxation, 4-7-8 breathing, and HD sound mixer.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  <meta name="theme-color" content="#061522">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Auris">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+
+  <title>Auris</title>
+
+  <style>
+    :root {
+      --bg: #061522;
+      --bg2: #0b2539;
+      --line: rgba(255,255,255,0.16);
+      --text: #f4fbff;
+      --sub: #b7d4e8;
+      --accent: #55e3e8;
+      --accent2: #8a7cff;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      background:
+        radial-gradient(circle at 20% 16%, rgba(85,227,232,.24), transparent 32%),
+        radial-gradient(circle at 82% 18%, rgba(138,124,255,.20), transparent 30%),
+        linear-gradient(145deg, var(--bg), var(--bg2));
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      overflow: hidden;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+      box-sizing: border-box;
+      z-index: 9999;
+      transition: opacity .25s ease;
+    }
+
+    .panel {
+      width: min(420px, 92vw);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.06));
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-radius: 28px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.35);
+      padding: 26px 22px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .app-icon {
+      width: 92px;
+      height: 92px;
+      margin: 0 auto 16px;
+      border-radius: 24px;
+      display: block;
+      box-shadow: 0 0 46px rgba(85,227,232,.30);
+      object-fit: cover;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: -0.04em;
+      color: var(--text);
+    }
+
+    .subtitle {
+      margin: 8px 0 18px;
+      color: var(--sub);
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .bar {
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,.10);
+      margin: 18px 0 14px;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 36%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      animation: loadingMove 1.35s ease-in-out infinite;
+    }
+
+    @keyframes loadingMove {
+      0% { transform: translateX(-100%); }
+      55% { transform: translateX(170%); }
+      100% { transform: translateX(260%); }
+    }
+
+    .notice {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      color: #d9f7ff;
+      background: rgba(85,227,232,.10);
+      border: 1px solid rgba(85,227,232,.18);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .small {
+      margin-top: 10px;
+      color: rgba(255,255,255,.55);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    #installTip {
+      display: none;
+      margin-top: 12px;
+      color: #ffffff;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    @media (max-height: 640px) {
+      .panel { padding: 18px 16px; border-radius: 22px; }
+      .app-icon { width: 70px; height: 70px; border-radius: 20px; }
+      h1 { font-size: 26px; }
+      .notice { display: none; }
+    }
+  </style>
 </head>
 <body>
-
-<!-- iOS 오디오 잠금 해제 -->
-<div class="audio-unlock" id="audio-unlock">
-  <div class="audio-icon">🎧</div>
-  <h2>Auris</h2>
-  <p>이명 관리 앱에 오신 것을 환영합니다<br>소리 기능을 사용하려면 아래 버튼을 탭하세요</p>
-  <button class="unlock-btn" onclick="unlockAudio()">시작하기</button>
-</div>
-
-<!-- 홈 화면 -->
-<div id="screen-home" class="screen active">
-  <div class="page-header">
-    <div class="page-title">Auris</div>
-    <div class="page-sub">오늘도 편안한 하루 되세요</div>
-  </div>
-  <div class="content">
-    <div class="status-card">
-      <div>
-        <div style="color:var(--green-light);font-size:12px;">오늘 이명 강도</div>
-        <div style="color:white;font-size:22px;font-weight:600;margin-top:4px;">기록 전</div>
-        <div style="color:var(--green-light);font-size:12px;margin-top:6px;">오늘 기록을 남겨보세요</div>
+  <div id="loading">
+    <div class="panel">
+      <img class="app-icon" src="icons/Icon-192.png" alt="Auris icon">
+      <h1>Auris</h1>
+      <div class="subtitle">
+        Sound care for tinnitus support<br>
+        Desync sound · HD mixer · Breathing routine
       </div>
-      <div style="margin-left:auto;background:var(--green);border-radius:12px;padding:10px;">
-        <svg width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      <div class="bar"><span></span></div>
+      <div class="notice">
+        iPhone Safari test mode<br>
+        Some native Android features such as phone vibration or native MP3 L/R control may be limited on web.
       </div>
-    </div>
-    <button class="quick-btn" onclick="switchTab('sound')">
-      <svg width="22" height="22" fill="white" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-      <span style="color:white;font-size:16px;font-weight:600;">지금 소리 켜기</span>
-    </button>
-    <div class="desync-card" onclick="switchTab('desync')">
-      <div class="desync-badge">뉴캐슬대학 2025 연구</div>
-      <div style="color:white;font-size:18px;font-weight:700;">신경 디싱크 세션</div>
-      <div style="color:var(--green-light);font-size:12px;margin-top:4px;line-height:1.5;">뉴캐슬대학 2025 논문 기반 사운드 치료<br>하루 1시간 · 6주 프로그램 · 연구 기반 근사 구현</div>
-      <div class="progress-bar"><div class="progress-fill" id="home-desync-progress" style="width:0%"></div></div>
-      <div style="color:var(--green-light);font-size:11px;margin-top:6px;" id="home-desync-days">0 / 42일 완료</div>
-    </div>
-    <div class="section-label">빠른 이완</div>
-    <div class="relax-row">
-      <div class="relax-card" onclick="startBreathing()"><span style="font-size:24px;">🌬️</span><span style="font-size:12px;color:var(--text-sub);font-weight:500;">4-7-8 호흡</span></div>
-      <div class="relax-card"><span style="font-size:24px;">🧘</span><span style="font-size:12px;color:var(--text-sub);font-weight:500;">근육 이완</span></div>
-    </div>
-  </div>
-</div>
-
-<!-- 사운드 믹서 -->
-<div id="screen-sound" class="screen">
-  <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
-    <div><div class="page-title">사운드 믹서</div><div class="page-sub">레이어를 조합해 나만의 소리를 만드세요</div></div>
-    <button onclick="showPresets()" style="background:var(--green-light);border:none;border-radius:20px;padding:6px 12px;font-size:12px;color:var(--green);font-weight:600;cursor:pointer;font-family:inherit;">프리셋</button>
-  </div>
-  <div class="play-card">
-    <div><div style="color:var(--green-light);font-size:12px;" id="play-status-label">재생 준비</div><div style="color:white;font-size:14px;font-weight:500;margin-top:4px;" id="play-active-count">슬라이더를 올려 소리를 선택하세요</div></div>
-    <button class="play-btn inactive" id="play-btn" onclick="togglePlay()">
-      <svg width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-    </button>
-  </div>
-  <div class="content" style="padding-top:0;">
-    <div class="section-label">🎯 이명 마스킹</div>
-    <div class="layer-item" id="layer-masking_8k"><div class="layer-icon">🎵</div><div class="layer-name">8kHz 마스킹</div><input type="range" class="layer-slider" min="0" max="100" value="0" oninput="setVolume('masking_8k',this.value)"><div class="layer-vol" id="vol-masking_8k">0</div></div>
-    <div class="section-label">🌫 노이즈</div>
-    <div class="layer-item" id="layer-pink_noise"><div class="layer-icon">🌊</div><div class="layer-name">핑크 노이즈</div><input type="range" class="layer-slider" min="0" max="100" value="0" oninput="setVolume('pink_noise',this.value)"><div class="layer-vol" id="vol-pink_noise">0</div></div>
-    <div class="layer-item" id="layer-brown_noise"><div class="layer-icon">🟤</div><div class="layer-name">브라운 노이즈</div><input type="range" class="layer-slider" min="0" max="100" value="0" oninput="setVolume('brown_noise',this.value)"><div class="layer-vol" id="vol-brown_noise">0</div></div>
-    <div class="section-label">🌿 자연음</div>
-    <div class="layer-item" id="layer-rain"><div class="layer-icon">🌧</div><div class="layer-name">빗소리</div><input type="range" class="layer-slider" min="0" max="100" value="0" oninput="setVolume('rain',this.value)"><div class="layer-vol" id="vol-rain">0</div></div>
-    <div class="layer-item" id="layer-waves"><div class="layer-icon">🌊</div><div class="layer-name">파도소리</div><input type="range" class="layer-slider" min="0" max="100" value="0" oninput="setVolume('waves',this.value)"><div class="layer-vol" id="vol-waves">0</div></div>
-    <div class="layer-item" id="layer-forest"><div class="layer-icon">🌲</div><div class="layer-name">숲소리</div><input type="range" class="layer-slider" min="0" max="100" value="0" oninput="setVolume('forest',this.value)"><div class="layer-vol" id="vol-forest">0</div></div>
-    <div class="layer-item" id="layer-cricket"><div class="layer-icon">🦗</div><div class="layer-name">귀뚜라미</div><input type="range" class="layer-slider" min="0" max="100" value="0" oninput="setVolume('cricket',this.value)"><div class="layer-vol" id="vol-cricket">0</div></div>
-    <div class="section-label">🏠 생활음</div>
-    <div class="layer-item" id="layer-cafe"><div class="layer-icon">☕</div><div class="layer-name">카페 소음</div><input type="range" class="layer-slider" min="0" max="100" value="0" oninput="setVolume('cafe',this.value)"><div class="layer-vol" id="vol-cafe">0</div></div>
-    <div class="layer-item" id="layer-fan"><div class="layer-icon">💨</div><div class="layer-name">선풍기</div><input type="range" class="layer-slider" min="0" max="100" value="0" oninput="setVolume('fan',this.value)"><div class="layer-vol" id="vol-fan">0</div></div>
-    <div class="section-label">🧠 뇌파</div>
-    <div class="layer-item" id="layer-binaural"><div class="layer-icon">🧠</div><div class="layer-name">알파파 바이노럴</div><input type="range" class="layer-slider" min="0" max="100" value="0" oninput="setVolume('binaural',this.value)"><div class="layer-vol" id="vol-binaural">0</div></div>
-  </div>
-  <div class="mixer-bottom">
-    <div class="timer-trigger" id="timer-trigger" onclick="showTimerModal()">
-      <span>⏱</span><span id="timer-label" style="font-size:13px;color:var(--text-light);">타이머</span>
-    </div>
-    <button class="btn-primary" style="flex:1;" onclick="savePreset()">이 조합 저장</button>
-  </div>
-</div>
-
-<!-- 신경 디싱크 -->
-<div id="screen-desync" class="screen desync-screen">
-  <div class="desync-header">
-    <h2 style="color:white;font-size:18px;font-weight:600;">신경 디싱크 세션</h2>
-    <button class="freq-btn" id="freq-btn" onclick="showFreqModal()">8.0kHz</button>
-  </div>
-  <div class="desync-progress-card">
-    <div><div style="color:var(--green-light);font-size:12px;">6주 프로그램</div><div style="color:white;font-size:16px;font-weight:600;margin-top:4px;" id="desync-days-text">0 / 42일 완료</div></div>
-    <div class="days-badge" id="days-badge">42일 남음</div>
-  </div>
-  <div class="visualizer-wrap"><canvas id="desync-canvas" width="320" height="130"></canvas></div>
-  <div class="timer-display" id="desync-timer">00:00</div>
-  <div class="timer-goal">목표 60:00</div>
-  <div class="session-progress"><div class="session-fill" id="session-fill" style="width:0%"></div></div>
-  <div class="session-pct" id="session-pct">0% 완료</div>
-  <div class="guide-card"><p id="desync-guide">🎧 이어폰 착용 후 낮고 편안한 볼륨으로 시작하세요<br>소리가 이상하게 들리는 건 정상입니다<br>불편하면 즉시 중단하세요</p></div>
-  <div class="controls">
-    <button class="stop-btn" id="stop-btn" style="display:none;" onclick="stopDesync()">
-      <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/></svg>
-    </button>
-    <button class="main-btn" id="desync-main-btn" onclick="toggleDesync()">
-      <svg width="36" height="36" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-    </button>
-  </div>
-</div>
-
-<!-- 기록 -->
-<div id="screen-record" class="screen">
-  <div class="page-header"><div class="page-title">오늘 기록</div><div class="page-sub">매일 기록하면 패턴을 찾을 수 있어요</div></div>
-  <div class="content">
-    <div class="card">
-      <div class="section-label" style="margin-top:0;">이명 강도</div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div id="intensity-display" style="font-size:36px;font-weight:700;color:var(--green);min-width:40px;">5</div>
-        <input type="range" class="layer-slider" min="1" max="10" value="5" style="flex:1;" oninput="document.getElementById('intensity-display').textContent=this.value">
+      <div id="installTip">
+        iPhone에서 테스트 후 공유 버튼 → “홈 화면에 추가”로 웹앱처럼 실행할 수 있습니다.
       </div>
-      <div class="section-label">소리 특성</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        <div class="tag-btn" onclick="this.classList.toggle('active')">고음형</div>
-        <div class="tag-btn" onclick="this.classList.toggle('active')">저음형</div>
-        <div class="tag-btn" onclick="this.classList.toggle('active')">복합형</div>
-        <div class="tag-btn" onclick="this.classList.toggle('active')">바람형</div>
-        <div class="tag-btn" onclick="this.classList.toggle('active')">오늘은 달라</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="section-label" style="margin-top:0;">기분</div>
-      <div style="display:flex;justify-content:space-around;">
-        <div class="mood-btn active" onclick="document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">😊</div>
-        <div class="mood-btn" onclick="document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">😐</div>
-        <div class="mood-btn" onclick="document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">😔</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="section-label" style="margin-top:0;">수면</div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <span style="font-size:13px;color:var(--text-sub);min-width:60px;">수면시간</span>
-        <input type="range" class="layer-slider" min="0" max="12" step="0.5" value="7" style="flex:1;" oninput="document.getElementById('sleep-display').textContent=this.value+'h'">
-        <span id="sleep-display" style="font-size:13px;color:var(--green);font-weight:600;min-width:32px;">7h</span>
-      </div>
-    </div>
-    <div class="card">
-      <div class="section-label" style="margin-top:0;">생활 요인</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        <div class="factor-btn" onclick="this.classList.toggle('active')">☕ 카페인</div>
-        <div class="factor-btn" onclick="this.classList.toggle('active')">🏃 운동</div>
-        <div class="factor-btn" onclick="this.classList.toggle('active')">🌳 야외활동</div>
-        <div class="factor-btn" onclick="this.classList.toggle('active')">🔊 소음 노출</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="section-label" style="margin-top:0;">메모</div>
-      <textarea placeholder="오늘 특이사항을 기록하세요..." style="width:100%;border:none;background:transparent;font-family:inherit;font-size:14px;color:var(--text);resize:none;outline:none;min-height:80px;"></textarea>
-    </div>
-    <button class="btn-primary" onclick="alert('오늘 기록이 저장됐어요! ✅')">오늘 기록 저장</button>
-  </div>
-</div>
-
-<!-- 대화 -->
-<div id="screen-chat" class="screen">
-  <div class="page-header"><div class="page-title">Auris와 대화</div><div class="page-sub">이명에 대해 편하게 이야기하세요</div></div>
-  <div class="content" id="chat-messages" style="padding-bottom:80px;">
-    <div class="chat-bubble ai">안녕하세요. 오늘 이명 상태는 어떠세요?</div>
-  </div>
-  <div style="position:fixed;bottom:64px;left:0;right:0;background:var(--white);border-top:1px solid var(--green-light);padding:12px 20px;display:flex;gap:8px;">
-    <input type="text" id="chat-input" placeholder="메시지를 입력하세요..." style="flex:1;border:1px solid var(--green-light);border-radius:24px;padding:10px 16px;font-family:inherit;font-size:14px;outline:none;background:var(--cream);">
-    <button onclick="sendChat()" style="background:var(--green);border:none;border-radius:50%;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-      <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-    </button>
-  </div>
-</div>
-
-<!-- 하단 네비게이션 -->
-<nav class="bottom-nav">
-  <div class="nav-item active" onclick="switchTab('home')" id="nav-home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>홈</div>
-  <div class="nav-item" onclick="switchTab('sound')" id="nav-sound"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>소리</div>
-  <div class="nav-item" onclick="switchTab('desync')" id="nav-desync"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>디싱크</div>
-  <div class="nav-item" onclick="switchTab('record')" id="nav-record"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>기록</div>
-  <div class="nav-item" onclick="switchTab('chat')" id="nav-chat"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>대화</div>
-</nav>
-
-<!-- 모달들 -->
-<div class="modal-overlay" id="freq-modal" onclick="closeModal('freq-modal')">
-  <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div class="modal-title">이명 주파수 설정</div>
-    <div class="modal-sub">본인 이명 소리와 가장 비슷한 주파수를 선택하세요</div>
-    <div class="freq-option" onclick="selectFreq(4000)"><div class="freq-option-label">4kHz</div><div class="freq-option-desc">저음 이명 (웅—)</div></div>
-    <div class="freq-option" onclick="selectFreq(6000)"><div class="freq-option-label">6kHz</div><div class="freq-option-desc">중고음 이명</div></div>
-    <div class="freq-option selected" onclick="selectFreq(8000)"><div class="freq-option-label">8kHz</div><div class="freq-option-desc">고음 이명 (삐—) · 기본값</div></div>
-    <div class="freq-option" onclick="selectFreq(10000)"><div class="freq-option-label">10kHz</div><div class="freq-option-desc">매우 고음 이명</div></div>
-    <div class="freq-option" onclick="selectFreq(12000)"><div class="freq-option-label">12kHz</div><div class="freq-option-desc">초고음 이명</div></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="timer-modal" onclick="closeModal('timer-modal')">
-  <div class="timer-modal" onclick="event.stopPropagation()">
-    <div style="font-size:18px;font-weight:700;color:var(--text);">수면 타이머</div>
-    <div style="font-size:13px;color:var(--text-light);margin-top:4px;">설정한 시간 후 소리가 꺼집니다</div>
-    <div class="timer-grid">
-      <div class="timer-chip" onclick="selectTimer(15)">15분</div>
-      <div class="timer-chip" onclick="selectTimer(30)">30분</div>
-      <div class="timer-chip" onclick="selectTimer(45)">45분</div>
-      <div class="timer-chip" onclick="selectTimer(60)">60분</div>
-      <div class="timer-chip" onclick="selectTimer(90)">90분</div>
-      <div class="timer-chip" onclick="selectTimer(120)">120분</div>
-      <div class="timer-chip" onclick="selectTimer(null)">끄기</div>
+      <div class="small">Loading Auris...</div>
     </div>
   </div>
-</div>
 
-<div class="modal-overlay" id="preset-modal" onclick="closeModal('preset-modal')">
-  <div class="preset-modal" onclick="event.stopPropagation()">
-    <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:16px;">저장된 조합</div>
-    <div class="preset-item" onclick="loadPreset('wife')"><div style="font-size:24px;">⭐</div><div><div style="font-size:14px;font-weight:600;">나의 조합</div><div style="font-size:12px;color:var(--text-light);">8kHz 마스킹 70% + 핑크노이즈 40% + 빗소리 50%</div></div></div>
-    <div class="preset-item" onclick="loadPreset('sleep')"><div style="font-size:24px;">🌙</div><div><div style="font-size:14px;font-weight:600;">수면 모드</div><div style="font-size:12px;color:var(--text-light);">브라운노이즈 60% + 파도소리 40% + 선풍기 30%</div></div></div>
-    <div class="preset-item" onclick="loadPreset('stress')"><div style="font-size:24px;">🧘</div><div><div style="font-size:14px;font-weight:600;">스트레스 완화</div><div style="font-size:12px;color:var(--text-light);">알파파 바이노럴 50% + 숲소리 60% + 빗소리 30%</div></div></div>
-    <div class="preset-item" onclick="loadPreset('focus')"><div style="font-size:24px;">☕</div><div><div style="font-size:14px;font-weight:600;">집중 모드</div><div style="font-size:12px;color:var(--text-light);">카페 소음 60% + 핑크노이즈 30%</div></div></div>
-  </div>
-</div>
-
-<script>
-
-/**
- * Auris Neural Desync Engine (Soft Version)
- * Based on: Yukhnovich EA et al., Hearing Research, 2025
- * 논문 파라미터 기반 근사 구현 - 부드러운 사운드 버전
- * 핵심 원리 유지: cross-frequency de-correlating modulation
- * 변경: 날카로운 harmonic → 부드러운 sine blend + 핑크노이즈 베이스
- */
-class DesyncEngine {
-  constructor(audioCtx, tinnitusFreq) {
-    this.audioCtx = audioCtx;
-    this.tinnitusFreq = tinnitusFreq || 8000;
-    this.sr = audioCtx.sampleRate;
-    this.masterGain = null;
-    this.isPlaying = false;
-    this.nextStartTime = 0;
-    this.schedulerTimer = null;
-  }
-
-  generateSegment() {
-    const sr = this.sr;
-    const dur = 4.0;
-    const ramp = 1.0;
-    const N = Math.floor(sr * dur);
-    const buf = this.audioCtx.createBuffer(1, N, sr);
-    const data = buf.getChannelData(0);
-
-    // f0: 96~256Hz 랜덤 (논문)
-    const f0 = 96 + Math.random() * 160;
-    const c = this.tinnitusFreq;
-
-    // 이명 주파수 중심 1옥타브 밴드
-    const bandLow  = c / Math.SQRT2;
-    const bandHigh = c * Math.SQRT2;
-
-    // harmonics: 1kHz~16kHz 범위
-    const nMin = Math.max(1, Math.ceil(1000 / f0));
-    const nMax = Math.floor(16000 / f0);
-    const count = nMax - nMin + 1;
-    if (count <= 0) return buf;
-
-    // 각 harmonic 랜덤 위상
-    const phi = Array.from({length: count}, () => Math.random() * 2 * Math.PI);
-    const q   = Array.from({length: count}, () => Math.random() * 2 * Math.PI);
-    const p   = Array.from({length: count}, () => Math.random() * 2 * Math.PI);
-
-    // 핑크노이즈 상태 (부드러운 베이스용)
-    const ps = new Float32Array(7);
-    let lastBrown = 0;
-
-    const rampN = Math.floor(ramp * sr);
-
-    for (let i = 0; i < N; i++) {
-      const t = i / sr;
-
-      // 1. 핑크노이즈 베이스 생성 (부드러운 배경)
-      const w = (Math.random() * 2 - 1);
-      ps[0]=0.99886*ps[0]+w*0.0555179; ps[1]=0.99332*ps[1]+w*0.0750759;
-      ps[2]=0.96900*ps[2]+w*0.1538520; ps[3]=0.86650*ps[3]+w*0.3104856;
-      ps[4]=0.55000*ps[4]+w*0.5329522; ps[5]=-0.7616*ps[5]-w*0.0168980;
-      const pink = (ps[0]+ps[1]+ps[2]+ps[3]+ps[4]+ps[5]+ps[6]+w*0.5362)*0.11;
-      ps[6] = w * 0.115926;
-
-      // 2. 논문 기반 변조 사운드 생성
-      let harmonicSum = 0;
-      for (let idx = 0; idx < count; idx++) {
-        const n = nMin + idx;
-        const freq = n * f0;
-
-        // Fn = log2(n*f0/c)
-        const Fn = Math.log2(freq / c);
-
-        // S(t) = 4.5 + 3*sin(p + 2π*0.125*t)  (논문 파라미터)
-        const St = 4.5 + 3 * Math.sin(p[idx] + 2 * Math.PI * 0.125 * t);
-
-        // An(t) = 1 + sin(2π[1*t + Fn*S(t)] + q)  (논문 파라미터)
-        const An = 1 + Math.sin(2 * Math.PI * (t + Fn * St) + q[idx]);
-
-        // 밴드 내만 변조 적용
-        const inBand = freq >= bandLow && freq <= bandHigh;
-        const amp = inBand ? Math.max(0, An) : 1.0;
-
-        // 핵심 변경: 사인파에 가우시안 가중치 적용 (고차 harmonic 감쇠)
-        // 높은 harmonic일수록 진폭을 줄여서 금속성 제거
-        const harmonicWeight = Math.exp(-0.3 * (n - nMin) / count);
-        harmonicSum += Math.sin(2 * Math.PI * freq * t + phi[idx]) * amp * harmonicWeight;
-      }
-
-      // 3. 혼합: 핑크노이즈 50% + 변조 사운드 50%
-      // 핑크노이즈가 날카로운 harmonic 소리를 부드럽게 감싸줌
-      const norm = 0.15 / Math.sqrt(count);
-      const harmonicPart = harmonicSum * norm;
-      const noisePart = pink * 0.25;
-
-      // 이명 주파수 밴드에만 집중한 부드러운 사인파 추가
-      // (Flosser 느낌의 부드러운 고음)
-      const softCarrier = Math.sin(2 * Math.PI * c * t) *
-        (0.5 + 0.5 * Math.sin(2 * Math.PI * 0.125 * t)) * 0.08;
-
-      let sample = harmonicPart + noisePart + softCarrier;
-
-      // 4. 소프트 클리핑 (tanh로 부드럽게)
-      sample = Math.tanh(sample * 1.5) * 0.6;
-
-      // 5. Raised cosine ramp
-      let rg = 1.0;
-      if (i < rampN) rg = 0.5 * (1 - Math.cos(Math.PI * i / rampN));
-      else if (i > N - rampN) rg = 0.5 * (1 - Math.cos(Math.PI * (N-i) / rampN));
-
-      data[i] = sample * rg;
+  <script>
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      document.getElementById('installTip').style.display = 'block';
     }
-    return buf;
-  }
 
-  start() {
-    if (this.isPlaying) return;
-    this.isPlaying = true;
-    this.masterGain = this.audioCtx.createGain();
-    this.masterGain.gain.value = 0.75;
-    this.masterGain.connect(this.audioCtx.destination);
-    this.nextStartTime = this.audioCtx.currentTime + 0.05;
-    this._schedule();
-    this.schedulerTimer = setInterval(() => { if(this.isPlaying) this._schedule(); }, 3000);
-  }
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('loading');
+      if (!el) return;
+      el.style.opacity = '0';
+      setTimeout(function () { el.remove(); }, 320);
+    });
+  </script>
 
-  _schedule() {
-    while (this.nextStartTime < this.audioCtx.currentTime + 0.5) {
-      const buf = this.generateSegment();
-      const src = this.audioCtx.createBufferSource();
-      src.buffer = buf;
-      src.connect(this.masterGain);
-      src.start(this.nextStartTime);
-      this.nextStartTime += 4.0;
-    }
-  }
-
-  stop() {
-    this.isPlaying = false;
-    clearInterval(this.schedulerTimer);
-    this.schedulerTimer = null;
-    if (this.masterGain) {
-      this.masterGain.gain.setTargetAtTime(0, this.audioCtx.currentTime, 0.2);
-      setTimeout(() => { try{this.masterGain.disconnect();}catch(e){} }, 500);
-      this.masterGain = null;
-    }
-  }
-
-  setFreq(f) { this.tinnitusFreq = f; }
-  setVolume(v) { if(this.masterGain) this.masterGain.gain.setTargetAtTime(v, this.audioCtx.currentTime, 0.1); }
-}
-let desyncEngine = null;
-
-
-let audioCtx = null;
-const soundNodes = {};
-let isPlaying = false;
-let timerMinutes = null;
-let timerTimeout = null;
-let desyncState = 'idle';
-let desyncElapsed = 0;
-let desyncInterval = null;
-let desyncNodes = {};
-let tinnitusFreq = 8000;
-let totalDays = parseInt(localStorage.getItem('desync_days') || '0');
-let animFrame = null;
-
-// iOS 오디오 잠금 해제
-function unlockAudio() {
-  document.getElementById('audio-unlock').style.display = 'none';
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  // 무음 재생으로 iOS 잠금 해제
-  const buf = audioCtx.createBuffer(1, 1, 22050);
-  const src = audioCtx.createBufferSource();
-  src.buffer = buf;
-  src.connect(audioCtx.destination);
-  src.start(0);
-}
-
-function initAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-}
-
-// 사운드 생성
-function createSoundNode(soundId) {
-  if (!audioCtx) return null;
-  const gain = audioCtx.createGain();
-  gain.gain.value = 0;
-  gain.connect(audioCtx.destination);
-  const proc = audioCtx.createScriptProcessor(4096, 0, 1);
-  const sr = audioCtx.sampleRate;
-  let t = 0, lb = 0, lw = 0;
-  const ps = new Float32Array(7);
-
-  proc.onaudioprocess = (e) => {
-    const out = e.outputBuffer.getChannelData(0);
-    for (let i = 0; i < 4096; i++) {
-      t += 1/sr;
-      const w = Math.random()*2-1;
-      let s = 0;
-      if (soundId === 'masking_8k') {
-        s = w*0.3 + Math.sin(2*Math.PI*8000*t)*0.35 + Math.sin(2*Math.PI*7500*t)*0.15 + Math.sin(2*Math.PI*8500*t)*0.15;
-      } else if (soundId === 'pink_noise') {
-        ps[0]=0.99886*ps[0]+w*0.0555179; ps[1]=0.99332*ps[1]+w*0.0750759;
-        ps[2]=0.96900*ps[2]+w*0.1538520; ps[3]=0.86650*ps[3]+w*0.3104856;
-        ps[4]=0.55000*ps[4]+w*0.5329522; ps[5]=-0.7616*ps[5]-w*0.0168980;
-        s = (ps[0]+ps[1]+ps[2]+ps[3]+ps[4]+ps[5]+ps[6]+w*0.5362)*0.11; ps[6]=w*0.115926;
-      } else if (soundId === 'brown_noise') {
-        lb=(lb+0.02*w)/1.02; s=Math.max(-0.8,Math.min(0.8,lb*3.5));
-      } else if (soundId === 'rain') {
-        ps[0]=0.99886*ps[0]+w*0.055; s=ps[0]*0.15+(Math.random()<0.002?Math.random()*0.3:0);
-      } else if (soundId === 'waves') {
-        lb=(lb+0.02*w)/1.02; s=Math.max(-0.8,Math.min(0.8,lb*3))*(Math.sin(2*Math.PI*0.12*t)*0.5+0.5);
-      } else if (soundId === 'forest') {
-        ps[0]=0.99886*ps[0]+w*0.055; s=ps[0]*0.15+Math.sin(2*Math.PI*3800*t)*0.07*(Math.sin(2*Math.PI*6*t)>0.7?1:0);
-      } else if (soundId === 'cricket') {
-        const b=Math.sin(2*Math.PI*5*t)>0.5?1:0; s=(Math.sin(2*Math.PI*4200*t)*0.35+Math.sin(2*Math.PI*3800*t)*0.25)*b;
-      } else if (soundId === 'cafe') {
-        ps[0]=0.99886*ps[0]+w*0.055; ps[1]=0.99332*ps[1]+w*0.075; s=(ps[0]+ps[1])*0.12+Math.sin(2*Math.PI*80*t)*0.05;
-      } else if (soundId === 'fan') {
-        s=Math.sin(2*Math.PI*50*t)*0.25+Math.sin(2*Math.PI*100*t)*0.12+w*0.08;
-      } else if (soundId === 'binaural') {
-        s=Math.sin(2*Math.PI*440*t)*0.3+Math.sin(2*Math.PI*10*t)*0.08;
-      }
-      out[i] = Math.max(-0.9, Math.min(0.9, s));
-    }
-  };
-  proc.connect(gain);
-  return { proc, gain };
-}
-
-function setVolume(soundId, value) {
-  initAudio();
-  const vol = value/100;
-  document.getElementById('vol-'+soundId).textContent = value;
-  const el = document.getElementById('layer-'+soundId);
-  vol > 0 ? el.classList.add('active') : el.classList.remove('active');
-  if (!soundNodes[soundId]) soundNodes[soundId] = createSoundNode(soundId);
-  if (soundNodes[soundId]) {
-    soundNodes[soundId].gain.gain.setTargetAtTime(vol*0.8, audioCtx.currentTime, 0.1);
-    soundNodes[soundId]._vol = vol*0.8;
-  }
-  const active = Object.values(soundNodes).filter(n=>n&&n._vol>0).length;
-  document.getElementById('play-active-count').textContent = active===0?'슬라이더를 올려 소리를 선택하세요':`${active}개 레이어 활성`;
-  if (vol > 0 && !isPlaying) { isPlaying = true; updatePlayBtn(); }
-}
-
-function togglePlay() {
-  initAudio(); isPlaying = !isPlaying;
-  Object.values(soundNodes).forEach(n => { if(n) n.gain.gain.setTargetAtTime(isPlaying?(n._vol||0):0, audioCtx.currentTime, 0.1); });
-  updatePlayBtn();
-}
-
-function updatePlayBtn() {
-  const btn = document.getElementById('play-btn');
-  document.getElementById('play-status-label').textContent = isPlaying?'재생 중':'재생 준비';
-  btn.classList.toggle('inactive', !isPlaying);
-  btn.innerHTML = isPlaying
-    ? '<svg width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
-    : '<svg width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-}
-
-function showPresets() { document.getElementById('preset-modal').classList.add('show'); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-
-const presetData = {
-  wife:{masking_8k:70,pink_noise:40,rain:50},
-  sleep:{brown_noise:60,waves:40,fan:30},
-  stress:{binaural:50,forest:60,rain:30},
-  focus:{cafe:60,pink_noise:30}
-};
-
-function loadPreset(name) {
-  closeModal('preset-modal'); initAudio();
-  document.querySelectorAll('.layer-slider').forEach(s=>s.value=0);
-  document.querySelectorAll('.layer-item').forEach(el=>el.classList.remove('active'));
-  document.querySelectorAll('[id^="vol-"]').forEach(el=>el.textContent='0');
-  Object.values(soundNodes).forEach(n=>{if(n) n.gain.gain.setTargetAtTime(0,audioCtx.currentTime,0.1);});
-  Object.entries(presetData[name]).forEach(([id,vol])=>{
-    const sl=document.querySelector(`#layer-${id} .layer-slider`);
-    if(sl){sl.value=vol; setVolume(id,vol);}
-  });
-}
-
-function savePreset() {
-  const active=document.querySelectorAll('.layer-item.active');
-  if(!active.length){alert('슬라이더를 올려 소리를 선택하세요');return;}
-  const n=prompt('조합 이름을 입력하세요:','내 조합');
-  if(n) alert(`'${n}' 저장됐어요!`);
-}
-
-function showTimerModal() { document.getElementById('timer-modal').classList.add('show'); }
-
-function selectTimer(min) {
-  closeModal('timer-modal');
-  if(timerTimeout){clearTimeout(timerTimeout);timerTimeout=null;}
-  timerMinutes=min;
-  const tr=document.getElementById('timer-trigger');
-  const tl=document.getElementById('timer-label');
-  if(min){
-    tr.classList.add('active'); tl.textContent=`${min}분 후 종료`;
-    timerTimeout=setTimeout(()=>{
-      Object.values(soundNodes).forEach(n=>{if(n) n.gain.gain.setTargetAtTime(0,audioCtx.currentTime,3);});
-      isPlaying=false; updatePlayBtn(); tr.classList.remove('active'); tl.textContent='타이머';
-    }, min*60*1000);
-  } else { tr.classList.remove('active'); tl.textContent='타이머'; }
-}
-
-// 신경 디싱크 (논문 기반 엔진)
-function createDesyncNodes(freq) {
-  stopDesyncNodes();
-  if (!audioCtx) return;
-  desyncEngine = new DesyncEngine(audioCtx, freq);
-  desyncEngine.start();
-}
-
-function stopDesyncNodes() {
-  if (desyncEngine) { desyncEngine.stop(); desyncEngine = null; }
-}
-
-function toggleDesync(){
-  initAudio();
-  if(desyncState==='idle') startDesync();
-  else if(desyncState==='running') pauseDesync();
-  else if(desyncState==='paused') resumeDesync();
-  else resetDesync();
-}
-
-function setDesyncBtn(icon){document.getElementById('desync-main-btn').innerHTML=`<svg width="36" height="36" fill="white" viewBox="0 0 24 24">${icon}</svg>`;}
-
-function startDesync(){
-  desyncState='running'; createDesyncNodes(tinnitusFreq);
-  document.getElementById('stop-btn').style.display='flex';
-  setDesyncBtn('<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>');
-  document.getElementById('desync-guide').innerHTML='🧠 뇌 신경 탈동기화 진행 중<br>이어폰을 유지하고 편안히 계세요';
-  desyncInterval=setInterval(tickDesync,1000);
-}
-
-function pauseDesync(){
-  desyncState='paused'; stopDesyncNodes(); clearInterval(desyncInterval);
-  setDesyncBtn('<path d="M8 5v14l11-7z"/>');
-  document.getElementById('desync-guide').innerHTML='⏸ 세션 일시정지 중';
-}
-
-function resumeDesync(){
-  desyncState='running'; createDesyncNodes(tinnitusFreq);
-  setDesyncBtn('<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>');
-  document.getElementById('desync-guide').innerHTML='🧠 뇌 신경 탈동기화 진행 중<br>이어폰을 유지하고 편안히 계세요';
-  desyncInterval=setInterval(tickDesync,1000);
-}
-
-function stopDesync(){ stopDesyncNodes(); clearInterval(desyncInterval); resetDesync(); }
-
-function resetDesync(){
-  desyncState='idle'; desyncElapsed=0; stopDesyncNodes(); clearInterval(desyncInterval);
-  document.getElementById('stop-btn').style.display='none';
-  setDesyncBtn('<path d="M8 5v14l11-7z"/>');
-  document.getElementById('desync-timer').textContent='00:00';
-  document.getElementById('session-fill').style.width='0%';
-  document.getElementById('session-pct').textContent='0% 완료';
-  document.getElementById('desync-guide').innerHTML='🎧 이어폰 착용 후 낮고 편안한 볼륨으로 시작하세요<br>소리가 이상하게 들리는 건 정상입니다<br>불편하면 즉시 중단하세요';
-}
-
-function tickDesync(){
-  desyncElapsed++;
-  const m=Math.floor(desyncElapsed/60).toString().padStart(2,'0');
-  const s=(desyncElapsed%60).toString().padStart(2,'0');
-  document.getElementById('desync-timer').textContent=`${m}:${s}`;
-  const pct=Math.min(desyncElapsed/3600*100,100);
-  document.getElementById('session-fill').style.width=pct+'%';
-  document.getElementById('session-pct').textContent=Math.round(pct)+'% 완료';
-  if(desyncElapsed>=3600){
-    clearInterval(desyncInterval); stopDesyncNodes(); desyncState='completed';
-    totalDays++; localStorage.setItem('desync_days',totalDays); updateDaysDisplay();
-    setDesyncBtn('<path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>');
-    document.getElementById('desync-guide').innerHTML='🎉 오늘 세션 완료! 수고하셨어요<br>효과는 3주 이상 지속될 수 있어요';
-    document.getElementById('stop-btn').style.display='none';
-  }
-}
-
-function updateDaysDisplay(){
-  const r=Math.max(0,42-totalDays);
-  document.getElementById('desync-days-text').textContent=`${totalDays} / 42일 완료`;
-  document.getElementById('days-badge').textContent=totalDays>=42?'완료! 🎉':`${r}일 남음`;
-  document.getElementById('home-desync-days').textContent=`${totalDays} / 42일 완료`;
-  document.getElementById('home-desync-progress').style.width=Math.min(totalDays/42*100,100)+'%';
-}
-
-function showFreqModal(){document.getElementById('freq-modal').classList.add('show');}
-function selectFreq(freq){
-  tinnitusFreq=freq;
-  document.querySelectorAll('.freq-option').forEach(el=>el.classList.remove('selected'));
-  event.currentTarget.classList.add('selected');
-  document.getElementById('freq-btn').textContent=(freq/1000).toFixed(1)+'kHz';
-  if(desyncState==='running'){stopDesyncNodes();createDesyncNodes(freq);}
-  closeModal('freq-modal');
-}
-
-function switchTab(tab){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const map={home:'screen-home',sound:'screen-sound',desync:'screen-desync',record:'screen-record',chat:'screen-chat'};
-  document.getElementById(map[tab]).classList.add('active');
-  document.getElementById('nav-'+tab).classList.add('active');
-  if(tab==='desync') startCanvas(); else stopCanvas();
-}
-
-// 캔버스
-let ct=0;
-function startCanvas(){
-  const canvas=document.getElementById('desync-canvas');
-  const ctx=canvas.getContext('2d');
-  const mods=[0.5,0.8,1.2,1.7,2.3,2.9,3.5,4.0];
-  const phases=mods.map(()=>Math.random()*Math.PI*2);
-  function draw(){
-    animFrame=requestAnimationFrame(draw);
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    const running=desyncState==='running';
-    for(let b=0;b<mods.length;b++){
-      const yc=canvas.height*(b+1)/(mods.length+1);
-      ctx.beginPath();
-      ctx.strokeStyle=`rgba(212,233,226,${running?0.55:0.15})`;
-      ctx.lineWidth=1.5;
-      for(let x=0;x<=canvas.width;x++){
-        const y=yc+Math.sin(2*Math.PI*mods[b]*(ct+x/canvas.width*0.4)+phases[b])*(canvas.height/(mods.length+1)/2)*0.8;
-        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-      }
-      ctx.stroke();
-    }
-    ct+=0.016;
-  }
-  draw();
-}
-function stopCanvas(){if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}}
-
-function startBreathing(){alert('4-7-8 호흡\n\n4초 들이쉬기\n→ 7초 참기\n→ 8초 내쉬기\n\n편안한 자세로 3회 반복하세요 🌬️');}
-
-function sendChat(){
-  const inp=document.getElementById('chat-input');
-  const msg=inp.value.trim(); if(!msg) return;
-  const cont=document.getElementById('chat-messages');
-  cont.innerHTML+=`<div class="chat-bubble user">${msg}</div>`;
-  inp.value='';
-  const replies=['그렇군요. 오늘 이명이 평소보다 심한가요?','힘드셨겠어요. 소리 켜드릴까요?','스트레스가 이명을 악화시킬 수 있어요. 호흡법을 해보는 건 어떨까요?','꾸준히 기록하시면 패턴을 찾는 데 도움이 돼요.','오늘 신경 디싱크 세션은 하셨나요?'];
-  setTimeout(()=>{cont.innerHTML+=`<div class="chat-bubble ai">${replies[Math.floor(Math.random()*replies.length)]}</div>`;cont.scrollTop=cont.scrollHeight;},800);
-  cont.scrollTop=cont.scrollHeight;
-}
-document.getElementById('chat-input').addEventListener('keypress',e=>{if(e.key==='Enter')sendChat();});
-
-updateDaysDisplay();
-startCanvas();
-</script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
